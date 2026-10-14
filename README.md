@@ -15,7 +15,7 @@ the GPU SGP4, the all-vs-all conjunction screening and the single-operator maneu
 | | What | State |
 |---|---|---|
 | M1 | Multi-operator maneuver detector over the 6-hourly operator-ephemeris archive | **in progress**: detector ported and tested; runs over the archive privately |
-| M1 | Storm-drag separation (NOAA SWPC Kp/F10.7; propulsionless satellites and debris as controls) | next |
+| M1 | Storm-drag separation: every change tagged with NOAA Kp; exposure and rates split into storm and quiet time; satellites without thrusters as controls | **in progress**: storm tagging done; control-based false-alarm rate next |
 | M2 | Validation against operator ephemerides and published maneuver logs | planned |
 | M3 | Versioned open catalogue with a DOI | planned, after data rights are cleared |
 | M4 | Comparison with operators' published counts; per-storm altitude loss | planned |
@@ -42,6 +42,12 @@ is allowed. Until then, this repository holds the methods and the tests that che
     - it is above a size floor (50 m);
     - it is more than 6 standard errors of the satellite's own noise.
   - Measures that noise as the median absolute deviation of the satellite's drag-corrected jumps.
+- **`commons/weather.py`**
+  - Reads NOAA SWPC's planetary Kp index (3-hourly) and labels storms on NOAA's G-scale
+    (Kp 5 = G1 ... Kp 9 = G5).
+  - Gives the highest Kp around any interval, so each detected change carries the geomagnetic
+    conditions it happened in. Storms heat the upper atmosphere and pull low satellites down faster,
+    which can look like a burn or hide one.
 - **`commons/watch.py`**
   - Joins each satellite's element sets across all archive snapshots and drops repeats.
   - Runs the detector.
@@ -52,7 +58,8 @@ is allowed. Until then, this repository holds the methods and the tests that che
 ```
 pip install -r requirements.txt
 python -m pytest -q
-python -m commons.watch --archive path/to/archive/data --out out
+curl -o data/kp.json https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json
+python -m commons.watch --archive path/to/archive/data --kp data/kp.json --out out
 ```
 
 The tests build a synthetic archive with known maneuvers, drag and noise, and check two things:
